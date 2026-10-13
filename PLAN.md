@@ -1,6 +1,6 @@
 # Plan
 
-**Next up:** Play-test in a browser (open `index.html`) and note anything that feels off.
+**Next up:** Re-run qa-tester to confirm the phone layout fixes.
 
 ## v1 tasks
 - [x] Core logic — createGame, guess, win/lose, masked word (game.js) — 2026-10-13
@@ -18,9 +18,12 @@
 - [x] Animations + hand-drawn polish (peel/strike tiles, pops, sway, blink, confetti) — validated against ux-reviewer motion checklist (style.css, ui.js, effects3d.js, index.html) — 2026-10-13
 - [x] Playwright MCP for browser testing (.mcp.json, agent files) — 2026-10-13
 - [x] Design system (DESIGN.md + tokenized style.css), information hierarchy redesign, fun clues for every word — 2026-10-13
-- [ ] Manual browser play-test of every screen (check look on desktop + phone)
+- [x] QA play-test of every game version at 7 screen sizes (qa-tester) — 2026-10-13
+- [x] Fix QA bugs: phone keyboard below the screen, long-word result card overflow, 320px keyboard too wide, clue button on result screen, clipped monster fur (style.css, ui.js, index.html) — 2026-10-13
+- [ ] Re-run qa-tester to confirm the fixes, watching the browser live (needs a Claude Code restart first)
 
 ## Ideas for later
 (out of scope for v1: scores/streaks, sound, multi-word phrases, online multiplayer)
 - "Saved / Best" counter like the reference image (needs score tracking — out of scope for v1)
 - Dark mode
+- Favicon / link preview image (only console error today is the missing favicon.ico)

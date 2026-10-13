@@ -92,6 +92,7 @@ Each screen has one obvious thing to look at, then a clear order of importance a
 1. **The word**: `--text-2xl`, centered, the biggest thing. It's what you're solving.
 2. **Feedback**: `--text-lg`, right under the word. It says what just happened (red on a miss).
 3. **Tiles + scene**, side by side (stacked on phones, scene first). Tiles are the action; the balloons show your lives as a picture.
+   On phones the game fits exactly one screen: the header and tiles keep their size and the scene shrinks to the space left (down to 72px on a 320×568 phone), so you never scroll between guesses. Landscape phones (≤500px tall) use a 9-column keyboard beside the scene. On phones and short screens the clue card turns into a single row.
 4. **Clue card**: category label (small caps) plus the 💡 clue button. The clue stays hidden until asked for, so you get to try first. It reveals itself automatically on the last balloon.
 5. **Top bar** (quiet, `--ink-soft`, `--text-sm`): ← Menu on the left; level and lives on the right.
 

@@ -9,3 +9,4 @@ Tips:
 | File | What it's for |
 |------|---------------|
 | `hangman how to play thumb.jpg.webp` | Main style guide: balloon scene, monster, square letter tiles, hand-drawn font |
+can 

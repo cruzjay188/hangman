@@ -524,6 +524,7 @@ fieldset {
 
 /* --- Result: a note pinned to the page --- */
 .result {
+  max-width: 360px; /* keeps a long 2-player word from squeezing the scene */
   text-align: center;
   padding: var(--space-5);
   box-shadow: var(--shadow-lift);
@@ -543,6 +544,7 @@ fieldset {
   font-size: var(--text-2xl);
   letter-spacing: 0.12em;
   line-height: var(--leading-tight);
+  overflow-wrap: anywhere; /* a long word breaks onto a second line instead of overflowing */
 }
 .result-clue {
   margin-top: var(--space-2);
@@ -840,12 +842,27 @@ section:not([hidden]) {
     --text-2xl: 2.1rem;
     --text-3xl: 2.6rem;
   }
+  /* The game fills exactly one screen: the header and tiles keep their
+     size, and the scene shrinks to whatever space is left. That way the
+     tiles are always on screen and you never scroll between guesses. */
+  #game-screen:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100svh - 2 * var(--space-4));
+  }
   .game-body {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    align-items: stretch;
     gap: var(--space-4);
   }
   .scene {
     order: -1; /* scene above the tiles on phones */
+    flex: 1 1 0;
+    min-height: 110px;
+    max-height: 285px;
+    max-width: none; /* the SVG keeps its shape and centers itself */
   }
   .keyboard {
     justify-content: center;
@@ -855,6 +872,75 @@ section:not([hidden]) {
   }
   .start-button {
     padding: var(--space-2) var(--space-7);
+  }
+}
+
+/* Phones and short screens: tighten the header so the tiles fit.
+   The clue card turns into one row: category on the left, button on the right. */
+@media (max-width: 640px), (max-height: 500px) {
+  .clue-card {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: var(--space-2) var(--space-4);
+  }
+  .word {
+    margin-top: var(--space-3);
+  }
+  .feedback {
+    font-size: var(--text-md);
+    margin: var(--space-2) 0 var(--space-3);
+  }
+  .result-word {
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Landscape phones: tiles in a wide 9-column block next to a small scene */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --tile: var(--tap-min);
+    --text-2xl: 2.1rem;
+  }
+  main {
+    padding-top: var(--space-2);
+  }
+  .clue-card {
+    margin-top: 0;
+  }
+  .keyboard {
+    grid-template-columns: repeat(9, var(--tile));
+  }
+  .scene {
+    max-height: calc(100svh - 230px);
+    min-height: 120px;
+  }
+  .key-tip {
+    display: none;
+  }
+}
+
+/* Short phones (like a 320×568 iPhone SE): the scene may get smaller still */
+@media (max-width: 640px) and (max-height: 620px) {
+  .game-body {
+    gap: var(--space-2);
+  }
+  .scene {
+    min-height: 72px;
+  }
+}
+
+/* Very narrow phones (320px): 6 tiles of 44px only fit with a little
+   less page padding and a slightly smaller gap. */
+@media (max-width: 360px) {
+  main {
+    padding: var(--space-3);
+  }
+  #game-screen:not([hidden]) {
+    min-height: calc(100svh - 2 * var(--space-3));
+  }
+  .keyboard {
+    gap: 6px;
   }
 }
 

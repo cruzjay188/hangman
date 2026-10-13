@@ -392,6 +392,7 @@ function showResult() {
   resultWord.textContent = state.word.toUpperCase();
   keyboardEl.hidden = true;
   keyTip.hidden = true;
+  clueButton.hidden = true; // the result card already shows the clue
   resultPanel.hidden = false;
   // Move focus here so pressing Enter starts the next round
   playAgainButton.focus();
