@@ -154,13 +154,25 @@ function buildBalloons(count) {
   for (let i = 0; i < count; i++) {
     const spot = BALLOON_SPOTS[i];
     const balloon = svg("g", { class: "balloon" });
+    // .tug rocks this one balloon on its string. Each balloon gets its own
+    // speed and starting point (a negative delay starts it mid-swing), so
+    // they drift out of step like real balloons instead of moving as one block.
+    const tug = svg("g", {
+      class: "tug",
+      style: `animation-duration: ${3 + (i % 3) * 0.6}s; animation-delay: -${i * 0.7}s`,
+    });
     // A gently curved string from the bottom of the balloon to the hand
-    balloon.appendChild(svg("path", {
+    tug.appendChild(svg("path", {
       class: "string",
       d: `M${spot.x} ${spot.y + 20} Q${(spot.x + HAND.x) / 2 + 6} ${(spot.y + HAND.y) / 2} ${HAND.x} ${HAND.y}`,
     }));
-    balloon.appendChild(svg("ellipse", { cx: spot.x, cy: spot.y, rx: 16, ry: 20, fill: spot.color }));
-    balloon.appendChild(svg("ellipse", { class: "shine", cx: spot.x - 6, cy: spot.y - 8, rx: 4, ry: 6 }));
+    // The body is grouped apart from the string so a pop can make the
+    // balloon vanish while its string falls away a moment later.
+    const body = svg("g", { class: "body" });
+    body.appendChild(svg("ellipse", { cx: spot.x, cy: spot.y, rx: 16, ry: 20, fill: spot.color }));
+    body.appendChild(svg("ellipse", { class: "shine", cx: spot.x - 6, cy: spot.y - 8, rx: 4, ry: 6 }));
+    tug.appendChild(body);
+    balloon.appendChild(tug);
     balloonsEl.appendChild(balloon);
   }
 }
@@ -266,28 +278,35 @@ function render() {
   const level = state.difficulty[0].toUpperCase() + state.difficulty.slice(1);
   hintEl.textContent = state.category || "Mystery word";
   levelEl.textContent = level;
-  livesEl.textContent = `🎈 ${state.livesLeft} / ${state.maxLives} lives`;
+  const livesText = `🎈 ${state.livesLeft} / ${state.maxLives} lives`;
+  // Bump the counter when it drops, so your eye links the number to the pop
+  if (livesEl.textContent && livesEl.textContent !== livesText && state.guessed.length > 0) {
+    playEffect(livesEl, "bump");
+  }
+  livesEl.textContent = livesText;
 
   // One box per letter, so blanks never blur together. When the game is
   // lost, fill in the missing letters and mark them so they stand out.
   wordEl.innerHTML = "";
+  wordEl.classList.toggle("won", state.status === "won"); // letters do a wave
   const masked = maskedWord(state);
   const lastGuess = state.guessed[state.guessed.length - 1];
   let revealCount = 0;
   state.word.split("").forEach((ch, i) => {
     const box = document.createElement("span");
     box.className = "letter";
+    box.style.setProperty("--i", i); // its position, so CSS can stagger the win wave
     if (masked[i] !== "_") {
       box.textContent = ch;
       // Letters from the guess just made drop into place, one after another
       if (ch === lastGuess && state.status !== "lost") {
         box.classList.add("reveal");
-        box.style.animationDelay = `${revealCount++ * 50}ms`;
+        box.style.setProperty("--delay", `${revealCount++ * 50}ms`);
       }
     } else if (state.status === "lost") {
       box.textContent = ch;
       box.classList.add("missed");
-      box.style.animationDelay = `${i * 60}ms`; // red letters fade in left to right
+      box.style.setProperty("--delay", `${i * 60}ms`); // red letters fade in left to right
     }
     wordEl.appendChild(box);
   });
@@ -317,6 +336,9 @@ function render() {
   flyerEl.classList.toggle("falling", state.status === "lost");
   flyerEl.classList.toggle("rising", state.status === "won");
   monsterEl.classList.toggle("chomp", state.status === "lost");
+  // Once things look bad, the monster keeps its eyes on the person above
+  // (it still blinks). It points the player's eye at the danger.
+  monsterEl.classList.toggle("watching", state.status === "playing" && state.livesLeft <= state.maxLives / 2);
 
   // The person looks worried once half the balloons are gone
   personEl.classList.toggle("worried", state.status === "playing" && state.livesLeft <= state.maxLives / 2);

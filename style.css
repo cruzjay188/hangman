@@ -619,15 +619,24 @@ fieldset {
   fill: var(--paper);
   opacity: 0.35;
 }
-/* Popping: shrink around the balloon's own center (transform-box).
+/* Popping: the body shrinks around its own center (transform-box).
    The curve dips below 0 first, so it swells a bit before it bursts. */
-.balloon {
+.balloon .body {
   transform-box: fill-box;
   transform-origin: center;
   transition: transform 0.2s cubic-bezier(0.6, -0.8, 0.7, 0.3), opacity 0.2s;
 }
-.balloon.popped {
+.balloon.popped .body {
   transform: scale(0);
+  opacity: 0;
+}
+/* Follow-through: after the pop, the string goes limp and drops away.
+   Something left over that keeps moving makes the pop feel physical. */
+.balloon .string {
+  transition: transform 0.5s ease-in 0.12s, opacity 0.5s ease-in 0.12s;
+}
+.balloon.popped .string {
+  transform: translateY(26px);
   opacity: 0;
 }
 
@@ -734,6 +743,7 @@ section:not([hidden]) {
 /* Found letters drop into their blanks and bounce (staggered by ui.js) */
 .letter.reveal {
   animation: drop-in var(--dur-med) var(--ease-spring) both;
+  animation-delay: var(--delay, 0ms);
 }
 @keyframes drop-in {
   from { opacity: 0; transform: translateY(-24px) scale(1.3); }
@@ -742,17 +752,39 @@ section:not([hidden]) {
 /* After a loss, the missing letters fade in one by one */
 .letter.missed {
   animation: fade-up 0.3s var(--ease-out) both;
+  animation-delay: var(--delay, 0ms);
 }
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
 }
 
-/* The feedback line bumps each time it changes */
-.feedback.bump {
+/* The feedback line bumps each time it changes, and the lives counter
+   bumps when it drops (same motion = "this just changed") */
+.feedback.bump,
+.lives.bump {
   animation: bump 0.25s var(--ease-spring);
 }
 @keyframes bump {
   from { transform: scale(1.15); }
+}
+.lives {
+  display: inline-block; /* inline spans can't be scaled */
+}
+
+/* WIN: the solved word does a stadium wave, letter by letter.
+   --i is each letter's position (set in ui.js). It waits 400ms so the
+   last letters can drop in first. No fill mode on purpose: before its
+   delay is up, the drop-in animation is left to play undisturbed. */
+.word.won .letter {
+  animation: wave-hop 0.45s var(--ease-out) calc(400ms + var(--i) * 70ms);
+}
+.word.won .letter.reveal {
+  animation:
+    drop-in var(--dur-med) var(--ease-spring) var(--delay, 0ms) both,
+    wave-hop 0.45s var(--ease-out) calc(400ms + var(--i) * 70ms);
+}
+@keyframes wave-hop {
+  40% { transform: translateY(-14px) rotate(-4deg); }
 }
 
 /* The clue unfolds when revealed */
@@ -781,6 +813,55 @@ section:not([hidden]) {
 @keyframes sway {
   from { transform: rotate(-2.5deg); }
   to { transform: rotate(2.5deg); }
+}
+
+/* Each balloon also rocks on its own string, pivoting at the hand
+   (172, 140) so the string stays attached. Speeds and start points
+   differ per balloon (set in ui.js), so the bunch never moves in lockstep. */
+.balloon .tug {
+  transform-box: view-box;
+  transform-origin: 172px 140px;
+  animation: tug 3.6s ease-in-out infinite alternate;
+}
+@keyframes tug {
+  from { transform: rotate(-3deg); }
+  to { transform: rotate(3deg); }
+}
+
+/* Worried: the person fidgets, kicking their legs (pivoting at the hip).
+   It shows the danger without any words.
+   It kicks in short bursts, then hangs still: a nonstop fast kick right
+   next to the word pulls the player's eye away from the puzzle, and they
+   need to focus most when they're low on balloons. */
+.person .leg {
+  transform-box: fill-box;
+  transform-origin: top;
+}
+.person.worried .leg {
+  animation: kick 2.4s ease-in-out infinite;
+}
+.person.worried .leg-r {
+  animation-delay: -0.3s; /* legs out of step, like pedaling */
+}
+@keyframes kick {
+  0%, 50%, 100% { transform: rotate(0deg); } /* the second half is a rest */
+  12.5% { transform: rotate(-12deg); }
+  25% { transform: rotate(12deg); }
+  37.5% { transform: rotate(-8deg); }
+}
+
+/* Saved: the free arm swings up and waves while floating away.
+   8 swings, then it stays raised (an even count ends on "from"). */
+.person .arm-free {
+  transform-box: view-box;
+  transform-origin: 162px 184px; /* the shoulder */
+}
+.flyer.rising .arm-free {
+  animation: wave-arm 0.3s ease-in-out 0.3s 8 alternate forwards;
+}
+@keyframes wave-arm {
+  from { transform: rotate(95deg); }
+  to { transform: rotate(135deg); }
 }
 
 /* "POP!" burst where a balloon was */
@@ -812,6 +893,15 @@ section:not([hidden]) {
 @keyframes blink {
   0%, 92%, 100% { transform: scaleY(1); }
   95% { transform: scaleY(0.1); }
+}
+/* ...looks up at the person on a pop, and keeps staring once
+   half the balloons are gone... */
+.monster .pupil {
+  transition: transform var(--dur-med) var(--ease-out);
+}
+.monster.hop .pupil,
+.monster.watching .pupil {
+  transform: translateY(-4px);
 }
 /* ...hops with excitement when a balloon pops... */
 .monster.hop {

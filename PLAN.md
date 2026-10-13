@@ -20,6 +20,7 @@
 - [x] Design system (DESIGN.md + tokenized style.css), information hierarchy redesign, fun clues for every word — 2026-10-13
 - [x] QA play-test of every game version at 7 screen sizes (qa-tester) — 2026-10-13
 - [x] Fix QA bugs: phone keyboard below the screen, long-word result card overflow, 320px keyboard too wide, clue button on result screen, clipped monster fur (style.css, ui.js, index.html) — 2026-10-13
+- [x] Motion pass 2: balloons tug on their own strings, popped strings fall away, monster watches the person, legs kick when worried, arm waves on a win, word does a wave, lives counter bumps (style.css, ui.js, index.html) — 2026-10-13
 - [ ] Re-run qa-tester to confirm the fixes, watching the browser live (needs a Claude Code restart first)
 
 ## Ideas for later

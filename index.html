@@ -96,7 +96,7 @@
         <!-- Level 4 (quiet): navigation and status live in a small top bar -->
         <div class="topbar">
           <button type="button" id="quit-game" class="quiet-button">← Menu</button>
-          <p class="status"><span id="level"></span> · <span id="lives"></span></p>
+          <p class="status"><span id="level"></span> · <span id="lives" class="lives"></span></p>
         </div>
 
         <!-- Level 3: the clue card, like a sticky note -->
@@ -151,11 +151,11 @@
             <!-- The stick figure, hanging on with one hand at (172, 140) -->
             <g class="person">
               <path d="M162 182 L182 166 L172 140" />          <!-- arm holding the strings -->
-              <path d="M162 184 L150 202" />                   <!-- other arm -->
+              <path class="arm-free" d="M162 184 L150 202" />  <!-- other arm (waves when saved) -->
               <path d="M162 173 L162 208" />                   <!-- body -->
               <path class="shorts" d="M154 204 L170 204 L172 220 L152 220 Z" />
-              <path d="M157 220 L155 242" />                   <!-- legs -->
-              <path d="M167 220 L170 242" />
+              <path class="leg" d="M157 220 L155 242" />        <!-- legs (kick when worried) -->
+              <path class="leg leg-r" d="M167 220 L170 242" />
               <circle class="head" cx="160" cy="162" r="11" />
               <path class="cap" d="M149 160 Q160 144 171 160 L176 161" />
               <path class="smile" d="M156 166 Q160 170 165 166" />
