@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hangman</title>
+  <!-- Hand-drawn font, inspired by reference/hangman how to play thumb.jpg.webp.
+       If you're offline, the page falls back to a normal font. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <!-- All the screens live on one page. ui.js shows one at a time
+         by toggling the `hidden` attribute. -->
+
+    <!-- 1. Menu -->
+    <section id="menu-screen">
+      <h1 class="title">Hangman</h1>
+      <p class="tagline">Guess the word before the balloons run out!</p>
+      <form id="menu-form">
+        <!-- Each choice is a real radio button, styled to look like a tile.
+             The <span> is what you see; the <input> is hidden but still works
+             with the keyboard and screen readers. -->
+        <fieldset>
+          <legend><span class="step">1</span> Players</legend>
+          <label class="choice"><input type="radio" name="mode" value="1" checked><span>1 Player</span></label>
+          <label class="choice"><input type="radio" name="mode" value="2"><span>2 Players</span></label>
+        </fieldset>
+
+        <fieldset>
+          <legend><span class="step">2</span> Difficulty</legend>
+          <label class="choice"><input type="radio" name="difficulty" value="easy" checked><span>Easy · 8 🎈</span></label>
+          <label class="choice"><input type="radio" name="difficulty" value="medium"><span>Medium · 6 🎈</span></label>
+          <label class="choice"><input type="radio" name="difficulty" value="hard"><span>Hard · 4 🎈</span></label>
+        </fieldset>
+
+        <fieldset id="category-field">
+          <legend><span class="step">3</span> Category</legend>
+          <div id="category-choices">
+            <label class="choice"><input type="radio" name="category" value="Random" checked><span>Random</span></label>
+            <!-- ui.js adds one choice per category from words.js -->
+          </div>
+        </fieldset>
+
+        <button type="submit" class="big-button start-button">Start</button>
+      </form>
+
+      <!-- <details> is a built-in show/hide box: no JavaScript needed -->
+      <details class="help">
+        <summary>How to play</summary>
+        <ul>
+          <li>Guess the secret word one letter at a time.</li>
+          <li>Click a letter tile, or type it on your keyboard.</li>
+          <li>Each wrong letter pops a balloon 🎈. Balloons are your lives.</li>
+          <li>Stuck? Tap <strong>💡 Need a clue?</strong> for a fun hint.</li>
+          <li>Fill in every letter before the last balloon pops — or the monster gets a snack!</li>
+          <li>2 players: Player 1 types a word, Player 2 guesses it.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- 2. Word entry (2-player only) -->
+    <section id="entry-screen" hidden>
+      <h2 class="title">Player 1</h2>
+      <p class="tagline">Type a secret word. Player 2, look away!</p>
+      <form id="entry-form">
+        <label class="field" for="secret-input">Secret word</label>
+        <div class="secret-row">
+          <!-- autocapitalize/spellcheck off: stop phones "fixing" the word.
+               maxlength keeps the word short enough to fit on screen. -->
+          <input type="password" id="secret-input" autocomplete="off" autocapitalize="off"
+                 spellcheck="false" maxlength="20" aria-describedby="secret-rules entry-error">
+          <button type="button" id="toggle-secret" aria-pressed="false">Show</button>
+        </div>
+        <p id="secret-rules" class="rules">Letters only (A–Z), at least 3 letters.</p>
+        <label class="field">Category (optional)
+          <input type="text" id="hint-input" autocomplete="off" maxlength="30" placeholder="e.g. Movies">
+        </label>
+        <label class="field">Fun clue (optional)
+          <input type="text" id="clue-input" autocomplete="off" maxlength="90" placeholder="e.g. A wizard school with moving staircases">
+        </label>
+        <p id="entry-error" class="error" role="alert"></p>
+        <div class="actions">
+          <button type="submit" class="big-button">Start guessing</button>
+          <button type="button" class="back-to-menu quiet-button">← Menu</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 3. Game (the result panel appears here too, when the game ends) -->
+    <section id="game-screen" hidden>
+      <header class="game-header">
+        <!-- Level 4 (quiet): navigation and status live in a small top bar -->
+        <div class="topbar">
+          <button type="button" id="quit-game" class="quiet-button">← Menu</button>
+          <p class="status"><span id="level"></span> · <span id="lives"></span></p>
+        </div>
+
+        <!-- Level 3: the clue card, like a sticky note -->
+        <div class="clue-card">
+          <p id="hint" class="category-label"></p>
+          <button type="button" id="clue-button" class="clue-button" aria-expanded="false" aria-controls="clue-text">💡 Need a clue?</button>
+          <p id="clue-text" class="clue-text" hidden></p>
+        </div>
+
+        <!-- Level 1: the word is the biggest thing on screen.
+             Each letter is its own box (built by ui.js). -->
+        <p id="word" class="word"></p>
+        <!-- Level 2: what just happened. aria-live: screen readers read it out. -->
+        <p id="feedback" class="feedback" aria-live="polite"></p>
+      </header>
+
+      <div class="game-body">
+        <div class="controls">
+          <div id="keyboard" class="keyboard"></div>
+          <p id="key-tip" class="rules key-tip">Tip: you can type letters on your keyboard too.</p>
+
+          <!-- 4. Result -->
+          <div id="result-panel" class="result" hidden>
+            <h2 id="result-message" class="result-message"></h2>
+            <p class="result-label">The word was</p>
+            <p id="result-word" class="result-word"></p>
+            <p id="result-clue" class="result-clue"></p>
+            <div class="actions">
+              <button type="button" id="play-again" class="big-button">Play again</button>
+              <button type="button" class="back-to-menu">Menu</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- The scene: a person holding balloons above a hungry monster.
+             One balloon per life. Each miss pops a balloon and the person
+             sinks lower. ui.js draws the balloons and the monster's fur. -->
+        <svg id="scene" class="scene" viewBox="0 -10 320 380" role="img" aria-label="Balloon scene">
+          <!-- Misty trees in the background -->
+          <g class="trees">
+            <path d="M40 370 L52 60 Q55 30 60 60 L78 370 Z" />
+            <path d="M95 370 L102 120 L92 80 L108 105 L114 40 L118 110 L128 370 Z" />
+            <path d="M230 370 L240 90 L226 50 L246 80 L252 20 L256 95 L272 370 Z" />
+            <path d="M280 370 L290 140 L300 120 L298 160 L310 370 Z" />
+          </g>
+
+          <!-- Everything inside #flyer moves down together as balloons pop -->
+          <g id="flyer" class="flyer">
+           <!-- .sway gently rocks everything from the hand, like wind -->
+           <g class="sway">
+            <g id="balloons"></g>
+            <!-- The stick figure, hanging on with one hand at (172, 140) -->
+            <g class="person">
+              <path d="M162 182 L182 166 L172 140" />          <!-- arm holding the strings -->
+              <path d="M162 184 L150 202" />                   <!-- other arm -->
+              <path d="M162 173 L162 208" />                   <!-- body -->
+              <path class="shorts" d="M154 204 L170 204 L172 220 L152 220 Z" />
+              <path d="M157 220 L155 242" />                   <!-- legs -->
+              <path d="M167 220 L170 242" />
+              <circle class="head" cx="160" cy="162" r="11" />
+              <path class="cap" d="M149 160 Q160 144 171 160 L176 161" />
+              <path class="smile" d="M156 166 Q160 170 165 166" />
+              <path class="frown" d="M156 169 Q160 165 165 169" />  <!-- shown when worried -->
+            </g>
+            <!-- "POP!" bursts are added here by ui.js, then removed -->
+            <g id="bursts"></g>
+           </g>
+          </g>
+
+          <!-- The monster is drawn last so it covers the person if they fall in -->
+          <g id="monster" class="monster">
+            <polygon id="monster-fur" />
+            <path class="horn" d="M112 292 Q100 262 118 270 Z" />
+            <path class="horn" d="M188 292 Q200 262 182 270 Z" />
+            <!-- Eyes are grouped so they can blink together -->
+            <g class="eyes">
+              <ellipse class="eye" cx="135" cy="312" rx="11" ry="9" />
+              <ellipse class="eye" cx="165" cy="312" rx="11" ry="9" />
+              <circle class="pupil" cx="137" cy="314" r="4" />
+              <circle class="pupil" cx="163" cy="314" r="4" />
+            </g>
+            <path class="brow" d="M122 300 L146 308" />
+            <path class="brow" d="M178 300 L154 308" />
+            <path class="mouth" d="M130 336 L170 336 L166 344 L134 344 Z" />
+            <path class="tooth" d="M136 336 L140 342 L144 336 Z" />
+            <path class="tooth" d="M156 336 L160 342 L164 336 Z" />
+          </g>
+        </svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- Order matters: ui.js uses things defined in words.js and game.js -->
+  <script src="words.js"></script>
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+  <!-- Optional: three.js powers the 3D confetti when you win.
+       If it can't load (e.g. offline), effects3d.js simply does nothing. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="effects3d.js"></script>
+</body>
+</html>

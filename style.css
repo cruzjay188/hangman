@@ -1,0 +1,877 @@
+/* style.css — Hangman's look, built on a small design system.
+   Style source: reference/hangman how to play thumb.jpg.webp
+   (white paper, hand-drawn letters, thick black tiles, misty trees).
+   Rules for using these tokens are written up in DESIGN.md.
+
+   Sections:
+     1. Design tokens      (all colors, sizes, spacing live here)
+     2. Base               (page, text)
+     3. Components         (buttons, choices, fields, tiles, cards)
+     4. Screens            (menu, word entry, game, result)
+     5. Scene              (SVG balloons, person, monster)
+     6. Motion             (animations — every one gives feedback)
+     7. Responsive         (phone layout)
+     8. Reduced motion */
+
+/* =========================================================
+   1. DESIGN TOKENS
+   Change a value here and it updates everywhere. Never type a
+   raw color or pixel size further down — use a token instead.
+   ========================================================= */
+:root {
+  /* --- Color --- */
+  --ink: #111;              /* main text, outlines (19:1 on paper) */
+  --ink-soft: #555;         /* secondary text (7.5:1) */
+  --ink-hover: #333;        /* primary button hover */
+  --paper: #fff;            /* page and tile background */
+  --faded: #8c8c8c;         /* used/wrong letters (3.4:1, OK for large text) */
+  --faded-line: #c9c9c9;    /* faded outlines and the X */
+  --mist: #ececec;          /* hover fill, background trees */
+  --note: #fff4b8;          /* sticky-note yellow for the clue card */
+  --error: #c0392b;         /* wrong guesses and errors (5.4:1) */
+
+  /* --- Spacing: a 4px scale. Use these for every margin, padding, gap --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* --- Type: one hand-drawn font, a size scale that grows ~1.25× per step --- */
+  --font-hand: "Patrick Hand SC", "Comic Sans MS", "Chalkboard SE", system-ui, sans-serif;
+  --text-xs: 0.95rem;   /* tips, small labels */
+  --text-sm: 1.1rem;    /* status bar, category label */
+  --text-md: 1.3rem;    /* body text, buttons, choices */
+  --text-lg: 1.6rem;    /* feedback, primary buttons */
+  --text-xl: 2.1rem;    /* tile letters, result message */
+  --text-2xl: 2.8rem;   /* THE WORD */
+  --text-3xl: 3.6rem;   /* page titles */
+  --leading-tight: 1.1;
+  --leading-normal: 1.35;
+
+  /* --- Lines & shapes --- */
+  --stroke: 3px;        /* the standard "marker" outline */
+  --stroke-thin: 2px;
+  /* Hand-drawn boxes: uneven corner radii make them look sketched */
+  --wobbly: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --wobbly-2: 15px 255px 15px 225px / 225px 15px 255px 15px;
+  --wobbly-3: 225px 25px 255px 15px / 25px 255px 15px 225px;
+
+  /* --- Depth: solid "paper cut-out" shadows, no blur --- */
+  --shadow-sm: 2px 2px 0 var(--ink);
+  --shadow: 3px 3px 0 var(--ink);
+  --shadow-lift: 5px 5px 0 var(--ink);
+
+  /* --- Sizes --- */
+  --tile: 52px;            /* letter tile */
+  --tap-min: 44px;         /* smallest thing a finger should tap */
+  --width-page: 880px;
+  --width-form: 520px;
+  --width-scene: 380px;    /* balloon scene (240px on phones) */
+
+  /* --- Motion: two curves and three speeds for everything --- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 0.12s;   /* hovers, presses */
+  --dur-med: 0.35s;    /* guess feedback (keep ≤ 0.4s) */
+  --dur-slow: 0.7s;    /* scene movement */
+}
+
+/* =========================================================
+   2. BASE
+   ========================================================= */
+
+/* Make the `hidden` attribute always win, even over display: grid */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--ink);
+  /* Faint paper grain */
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1.2px);
+  background-size: 6px 6px;
+}
+
+main {
+  max-width: var(--width-page);
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+/* =========================================================
+   3. COMPONENTS
+   ========================================================= */
+
+/* --- Buttons: three levels of importance ---
+   .big-button   primary   — the one main action on a screen (filled black)
+   button        secondary — other actions (outlined + shadow)
+   .quiet-button tertiary  — navigation (text only, underlined)       */
+button {
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--wobbly);
+  box-shadow: var(--shadow);
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  /* Hover lifts toward you; pressing pushes it flat into the page */
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast);
+}
+button:hover:not(:disabled) {
+  background: var(--mist);
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-lift);
+}
+button:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+button:focus-visible {
+  outline: var(--stroke) dashed var(--ink);
+  outline-offset: var(--space-1);
+}
+
+.big-button {
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--text-lg);
+  padding: var(--space-2) var(--space-6);
+  box-shadow: var(--shadow-lift);
+}
+.big-button:hover:not(:disabled) {
+  background: var(--ink-hover);
+}
+
+.quiet-button {
+  border: none;
+  box-shadow: none;
+  background: none;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.quiet-button:hover:not(:disabled) {
+  background: none;
+  box-shadow: none;
+  transform: none;
+  color: var(--ink);
+}
+
+/* A row of buttons, primary first */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+  align-items: center;
+  margin-top: var(--space-4);
+}
+
+/* --- Choice tiles (menu radios): the real radio is hidden,
+   the <span> is what you see. Keyboard + screen readers still work. --- */
+.choice {
+  display: inline-block;
+}
+.choice input {
+  position: absolute;
+  opacity: 0;
+}
+.choice span {
+  display: inline-block;
+  min-height: var(--tap-min);
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-4);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--wobbly);
+  box-shadow: var(--shadow-sm);
+  background: var(--paper);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.choice span:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow);
+}
+.choice input:checked + span {
+  background: var(--ink);
+  color: var(--paper);
+  transform: rotate(-1.5deg); /* the chosen option looks "picked up" */
+}
+.choice input:focus-visible + span {
+  outline: var(--stroke) dashed var(--ink);
+  outline-offset: var(--space-1);
+}
+
+/* --- Text fields --- */
+.field {
+  display: block;
+  text-align: left;
+  margin-top: var(--space-4);
+}
+.field input,
+.secret-row input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--tap-min);
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--text-lg);
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--wobbly-2);
+  background: var(--paper);
+}
+.field input::placeholder {
+  color: var(--faded);
+  font-size: var(--text-md);
+}
+/* Red border when the word breaks the rules */
+input[aria-invalid="true"] {
+  border-color: var(--error) !important;
+}
+
+/* Small helper text and errors under fields */
+.rules {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  margin-top: var(--space-1);
+  text-align: left;
+}
+.error {
+  color: var(--error);
+  font-size: var(--text-sm);
+  min-height: 1.4em; /* reserve the space so nothing jumps */
+  margin-top: var(--space-2);
+}
+
+/* --- Paper card: the shared look for the help box, clue and result --- */
+.help,
+.result {
+  border: var(--stroke) solid var(--ink);
+  border-radius: var(--wobbly-2);
+  background: var(--paper);
+}
+
+/* =========================================================
+   4. SCREENS
+   ========================================================= */
+
+/* --- Shared screen header --- */
+.title {
+  font-size: var(--text-3xl);
+  font-weight: normal;
+  line-height: var(--leading-tight);
+  text-align: center;
+  letter-spacing: 0.08em;
+  margin-top: var(--space-5);
+}
+.tagline {
+  text-align: center;
+  color: var(--ink-soft);
+  margin: var(--space-2) 0 var(--space-6);
+}
+
+/* --- Menu --- */
+#menu-form,
+#entry-form {
+  max-width: var(--width-form);
+  margin: 0 auto;
+  text-align: center;
+}
+fieldset {
+  border: none;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+}
+legend {
+  font-size: var(--text-md);
+  margin: 0 auto var(--space-3);
+}
+/* Numbered step circles: 1 → 2 → 3 shows the order at a glance */
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  margin-right: var(--space-1);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: 50%;
+  font-size: var(--text-sm);
+}
+#category-choices,
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.start-button {
+  margin-top: var(--space-2);
+  font-size: var(--text-xl);
+  padding: var(--space-2) var(--space-8);
+}
+.help {
+  max-width: var(--width-form);
+  margin: var(--space-7) auto 0;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow);
+}
+.help summary {
+  cursor: pointer;
+  text-align: center;
+  font-size: var(--text-md);
+  min-height: var(--tap-min);
+  line-height: var(--tap-min);
+}
+.help ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}
+.help li + li {
+  margin-top: var(--space-1);
+}
+
+/* --- Word entry --- */
+.secret-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+.secret-row input {
+  flex: 1;
+  min-width: 0;
+}
+.secret-row button {
+  margin-top: var(--space-1);
+}
+
+/* --- Game: the information hierarchy, top to bottom ---
+   Level 4  .topbar      quiet: Menu link, level, lives
+   Level 3  .clue-card   the category + fun clue
+   Level 1  .word        the biggest thing on screen
+   Level 2  .feedback    what just happened
+   then the tiles and the scene side by side            */
+.game-header {
+  text-align: center;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.clue-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: var(--width-form);
+  margin: var(--space-3) auto 0;
+  padding: var(--space-3) var(--space-5);
+  background: var(--note);
+  border: var(--stroke-thin) solid var(--ink);
+  border-radius: var(--wobbly-3);
+  box-shadow: var(--shadow-sm);
+  transform: rotate(-1deg); /* stuck on slightly crooked, like a real note */
+}
+.category-label {
+  font-size: var(--text-sm);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.clue-button {
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+.clue-text {
+  font-size: var(--text-md);
+  max-width: 32ch; /* short lines are easier to read */
+}
+
+.word {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  min-height: calc(var(--text-2xl) * 1.3);
+}
+/* Each letter sits on its own underline, so you can count the blanks */
+.letter {
+  width: 1.3em;
+  font-size: var(--text-2xl);
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  border-bottom: 4px solid var(--ink);
+  border-radius: 0 0 6px 4px; /* a slightly wavy hand-drawn underline */
+}
+.letter.missed {
+  color: var(--error); /* letters you never found, after losing */
+}
+
+.feedback {
+  font-size: var(--text-lg);
+  min-height: 1.5em; /* keeps the layout from jumping when text changes */
+  margin: var(--space-3) 0 var(--space-5);
+}
+.feedback.bad {
+  color: var(--error); /* the words still say it, red is extra */
+}
+
+/* Tiles on the left, scene on the right */
+.game-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* --- Letter tiles: a 6-column grid, like the reference --- */
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(6, var(--tile));
+  gap: var(--space-2);
+}
+.keyboard button {
+  position: relative;
+  width: var(--tile);
+  height: var(--tile);
+  min-height: 0;
+  padding: 0;
+  font-size: var(--text-xl);
+  text-transform: uppercase;
+}
+/* Each tile gets a slightly different sketchy shape */
+.keyboard button:nth-child(3n) {
+  border-radius: var(--wobbly-2);
+}
+.keyboard button:nth-child(3n + 1) {
+  border-radius: var(--wobbly-3);
+}
+/* Correct: solid ink with a white letter, pressed flat (used) */
+.keyboard button.right,
+.keyboard button.right:disabled {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+  transform: none;
+  cursor: default;
+}
+/* Wrong: flat, faded, crossed out */
+.keyboard button.wrong {
+  color: var(--faded);
+  border-color: var(--faded-line);
+  background: var(--paper);
+  box-shadow: none;
+  cursor: default;
+}
+/* The X is two thin bars (::before and ::after), so the "strike"
+   animation can draw each one in */
+.keyboard button.wrong::before,
+.keyboard button.wrong::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: var(--stroke);
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--faded-line);
+  transform: rotate(45deg);
+}
+.keyboard button.wrong::after {
+  transform: rotate(-45deg);
+}
+/* When the game ends, every tile goes flat */
+.keyboard button:disabled {
+  box-shadow: none;
+}
+
+.key-tip {
+  margin-top: var(--space-3);
+}
+
+/* --- Result: a note pinned to the page --- */
+.result {
+  text-align: center;
+  padding: var(--space-5);
+  box-shadow: var(--shadow-lift);
+  transform: rotate(-1deg);
+}
+.result-message {
+  font-size: var(--text-xl);
+  font-weight: normal;
+  line-height: var(--leading-tight);
+}
+.result-label {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+.result-word {
+  font-size: var(--text-2xl);
+  letter-spacing: 0.12em;
+  line-height: var(--leading-tight);
+}
+.result-clue {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+/* three.js confetti layer: covers the page but lets clicks through */
+.confetti-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* =========================================================
+   5. SCENE (SVG)
+   ========================================================= */
+.scene {
+  width: 100%;
+  max-width: var(--width-scene);
+  justify-self: center;
+  overflow: visible;
+}
+.trees path {
+  fill: var(--mist);
+}
+
+/* Sinking after a miss: a springy drop that overshoots a little, like a jolt */
+.flyer {
+  transition: transform var(--dur-slow) var(--ease-spring);
+}
+.flyer.falling {
+  transition: transform 0.6s ease-in; /* a straight fall into the monster */
+}
+.flyer.rising {
+  transition: transform 1.4s var(--ease-out); /* drifting up to safety */
+}
+
+.person path,
+.person circle {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.person .head,
+.person .shorts,
+.person .cap {
+  fill: var(--paper);
+}
+.person .smile,
+.person .frown {
+  stroke-width: 2;
+}
+/* The person looks worried when half the balloons are gone */
+.person .frown,
+.person.worried .smile {
+  display: none;
+}
+.person.worried .frown {
+  display: inline;
+}
+
+.balloon .string {
+  stroke: var(--ink);
+  stroke-width: 1;
+  fill: none;
+}
+.balloon .shine {
+  fill: var(--paper);
+  opacity: 0.35;
+}
+/* Popping: shrink around the balloon's own center (transform-box).
+   The curve dips below 0 first, so it swells a bit before it bursts. */
+.balloon {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.2s cubic-bezier(0.6, -0.8, 0.7, 0.3), opacity 0.2s;
+}
+.balloon.popped {
+  transform: scale(0);
+  opacity: 0;
+}
+
+.monster #monster-fur,
+.monster .horn,
+.monster .pupil,
+.monster .mouth {
+  fill: var(--ink);
+}
+.monster .eye,
+.monster .tooth {
+  fill: var(--paper);
+}
+.monster .brow {
+  stroke: var(--paper);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.monster .mouth {
+  stroke: var(--paper);
+  stroke-width: 2;
+}
+
+/* =========================================================
+   6. MOTION — every animation tells the player something
+   ========================================================= */
+
+/* Screens slide in gently when they appear */
+section:not([hidden]) {
+  animation: screen-in var(--dur-med) var(--ease-out);
+}
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+/* The menu title bobs slowly, like it's hanging from balloons */
+#menu-screen .title {
+  animation: title-bob 3s ease-in-out infinite alternate;
+}
+@keyframes title-bob {
+  from { transform: rotate(-1deg) translateY(0); }
+  to { transform: rotate(1deg) translateY(-4px); }
+}
+
+/* RIGHT letter: the tile peels over like a sticker from its corner
+   and lands showing its dark "correct" side. (0.4s) */
+.keyboard button.peel {
+  transform-origin: top left;
+  animation: peel 0.4s var(--ease-out);
+}
+@keyframes peel {
+  0% {
+    transform: perspective(300px) rotate3d(1, -1, 0, 0deg);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  45% {
+    transform: perspective(300px) rotate3d(1, -1, 0, 80deg);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.25);
+  }
+  55% {
+    transform: perspective(300px) rotate3d(1, -1, 0, 80deg);
+    background: var(--ink);
+    color: var(--paper);
+  }
+  100% { transform: none; }
+}
+
+/* WRONG letter: shake "no", flash red, draw the X. (0.4s total) */
+.keyboard button.strike {
+  animation: shake-no var(--dur-med) ease-in-out;
+}
+.keyboard button.strike::before {
+  animation: draw-x1 0.25s var(--ease-out) 0.1s both;
+}
+.keyboard button.strike::after {
+  animation: draw-x2 0.25s var(--ease-out) 0.15s both; /* ends at 0.4s */
+}
+@keyframes shake-no {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); border-color: var(--error); color: var(--error); }
+  40% { transform: translateX(6px); border-color: var(--error); color: var(--error); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes draw-x1 {
+  from { transform: rotate(45deg) scaleX(0); background: var(--error); }
+}
+@keyframes draw-x2 {
+  from { transform: rotate(-45deg) scaleX(0); background: var(--error); }
+}
+
+/* REPEAT guess: a tiny wiggle — "you already tried this" */
+.keyboard button.nudge {
+  animation: nudge 0.3s ease-in-out;
+}
+@keyframes nudge {
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(6deg); }
+}
+
+/* Found letters drop into their blanks and bounce (staggered by ui.js) */
+.letter.reveal {
+  animation: drop-in var(--dur-med) var(--ease-spring) both;
+}
+@keyframes drop-in {
+  from { opacity: 0; transform: translateY(-24px) scale(1.3); }
+}
+
+/* After a loss, the missing letters fade in one by one */
+.letter.missed {
+  animation: fade-up 0.3s var(--ease-out) both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* The feedback line bumps each time it changes */
+.feedback.bump {
+  animation: bump 0.25s var(--ease-spring);
+}
+@keyframes bump {
+  from { transform: scale(1.15); }
+}
+
+/* The clue unfolds when revealed */
+.clue-text:not([hidden]) {
+  animation: unfold var(--dur-med) var(--ease-spring);
+}
+@keyframes unfold {
+  from { opacity: 0; transform: scaleY(0.4); }
+}
+
+/* Result note rises in like it's being held up */
+.result:not([hidden]) {
+  animation: rise 0.45s var(--ease-spring);
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(20px) rotate(-4deg); }
+}
+
+/* Idle: the person and balloons sway in the breeze.
+   transform-box: view-box lets us pivot around a point in the drawing. */
+.sway {
+  transform-box: view-box;
+  transform-origin: 172px 60px; /* middle of the balloon bunch */
+  animation: sway 4s ease-in-out infinite alternate;
+}
+@keyframes sway {
+  from { transform: rotate(-2.5deg); }
+  to { transform: rotate(2.5deg); }
+}
+
+/* "POP!" burst where a balloon was */
+.burst {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: burst 0.5s var(--ease-out) forwards;
+}
+.burst line {
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.burst text {
+  font-family: var(--font-hand);
+  font-size: 14px;
+  fill: var(--ink);
+}
+@keyframes burst {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.3); opacity: 0; }
+}
+
+/* Monster blinks every few seconds... */
+.monster .eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 5s infinite;
+}
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+/* ...hops with excitement when a balloon pops... */
+.monster.hop {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: hop var(--dur-med) var(--ease-out);
+}
+@keyframes hop {
+  40% { transform: translateY(-10px) scaleY(1.05); }
+}
+/* ...and chomps when it wins */
+.monster.chomp {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: chomp 0.3s ease-in-out 3;
+}
+@keyframes chomp {
+  50% { transform: scaleY(0.9); }
+}
+
+/* =========================================================
+   7. RESPONSIVE — phones: stack everything, shrink one step
+   ========================================================= */
+@media (max-width: 640px) {
+  :root {
+    --tile: var(--tap-min);
+    --width-scene: 240px;
+    --text-2xl: 2.1rem;
+    --text-3xl: 2.6rem;
+  }
+  .game-body {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  .scene {
+    order: -1; /* scene above the tiles on phones */
+  }
+  .keyboard {
+    justify-content: center;
+  }
+  .key-tip {
+    display: none; /* phones have no physical keyboard */
+  }
+  .start-button {
+    padding: var(--space-2) var(--space-7);
+  }
+}
+
+/* =========================================================
+   8. REDUCED MOTION — players who turn off animations in their
+   system settings get instant changes instead (heuristic 7).
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .burst {
+    display: none;
+  }
+}
